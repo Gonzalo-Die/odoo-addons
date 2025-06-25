@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_wooc_instance_kanban_debug_text_v2" model="ir.ui.view">
+    <field name="name">woocommerce.instance.kanban.debug.text.v2</field>
+    <field name="model">woocommerce.instance</field>
+    <field name="inherit_id" ref="mt_odoo_woocommerce_connector.view_wooc_instance_kanban"/>
+    <field name="arch" type="xml">
+      <!-- 
+        Insertar un DIV con texto PLANO *justo después* de cerrar la plantilla
+        <t t-name="kanban-box">…</t>, para que aparezca debajo de todo el contenido de cada tarjeta Kanban.
+      -->
+      <xpath expr="//templates/t[@t-name='kanban-box']" position="after">
+        <div style="padding:8px; background:#f0f0f0; border:1px dashed #888; margin-top:8px;">
+          --- Aquí va mi texto de prueba ABAJO de la tarjeta ---
+        </div>
+      </xpath>
+    </field>
+  </record>
+</odoo>

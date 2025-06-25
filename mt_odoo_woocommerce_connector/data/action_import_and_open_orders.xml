@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_import_woocomm_and_open_orders" model="ir.actions.server">
+        <field name="name">Importar y Abrir Woo Orders</field>
+        <!-- Ligado al modelo sale.order -->
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <!-- Disponible en vistas tree y form -->
+        <field name="binding_view_types">tree,form</field>
+        <!-- Indicamos que vamos a ejecutar Python -->
+        <field name="state">code</field>
+        <!--
+          Aquí está el bloque Python. Usamos env.context en lugar de context.
+          Además, cada línea del CDATA debe empezar en columna 0 (sin espacios).
+          A la variable result le asignamos la acción que devuelve el árbol de pedidos.
+        -->
+        <field name="code"><![CDATA[
+instance_id = env['woocommerce.instance'].browse(env.context.get('woocomm_instance_id'))
+if instance_id:
+    model.import_sale_order(instance_id)
+action = env.ref('mt_odoo_woocommerce_connector.action_sale_order_tree_woocomm').read()[0]
+result = action
+        ]]></field>
+    </record>
+</odoo>

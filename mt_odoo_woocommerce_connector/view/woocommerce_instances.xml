@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- FORMULARIO de configuración de instancia (no cambia) -->
+    <record id="view_wooc_instance_form" model="ir.ui.view">
+        <field name="name">wooc.instance.form</field>
+        <field name="model">woocommerce.instance</field>
+        <field name="arch" type="xml">
+            <form string="Configure WooCommerce Instance">
+                <header>
+                    <button string="Autenticar" type="object" name="connection_authenticate"
+                            class="oe_highlight" icon="fa-plug"/>
+                </header>
+                <div class="alert alert-danger"
+                     role="alert"
+                     style="height: 40px; margin-bottom:0px;"
+                     invisible="is_authenticated == True">
+                    <strong>¡Debes autenticar la conexión antes de continuar!</strong>
+                </div>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="shop_url"/>
+                        <field name="wooc_consumer_key" password="True"/>
+                        <field name="wooc_consumer_secret" password="True"/>
+                        <field name="wooc_api_version"/>
+                        <field name="is_authenticated" invisible="1"/>
+                        <field name="wooc_company_id" required="1"
+                               options="{'no_open': True, 'no_create': True, 'no_create_edit': True}"
+                               string="Company"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- VISTA TREE mínima solo para listar instancias -->
+    <record id="view_wooc_instance_tree" model="ir.ui.view">
+        <field name="name">wooc.instance.tree.view</field>
+        <field name="model">woocommerce.instance</field>
+        <field name="arch" type="xml">
+            <tree string="WooCommerce Instances">
+                <field name="name"/>
+                <field name="wooc_company_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- VISTA KANBAN (Dashboard) -->
+    <record id="view_wooc_instance_kanban" model="ir.ui.view">
+        <field name="name">wooc.instance.kanban</field>
+        <field name="model">woocommerce.instance</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_dashboard o_kanban_wooc" create="false" sample="1">
+                <!-- IMPORTANTE: forzamos la carga de ambos campos JSON -->
+                <field name="name"/>
+                <field name="wooc_all_orders_json"/>
+                <field name="wooc_all_products_json"/>
+
+                <templates>
+                    <t t-name="kanban-box">
+                        <div>
+                            <!-- — Header (nombre inst.) — -->
+                            <div class="o_kanban_card_header">
+                                <div class="o_kanban_card_header_title">
+                                    <div class="o_primary">
+                                        <t t-esc="record.name.value"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- — Gráfico de ventas por mes — -->
+                            <div>
+                                <group class="dashboard_graph_data">
+                                    <field name="wooc_dashboard_graph_data"
+                                           widget="wooc_dashboard_graph"
+                                           graph_type="bar"/>
+                                </group>
+                            </div>
+
+                            <!-- — Botón “Actualizar pedidos” — -->
+                            <div class="o_kanban_card_footer o_kanban_stat_box">
+                                <button name="action_import_orders"
+                                        string="Actualizar pedidos"
+                                        type="object"
+                                        class="oe_stat_button oe_stat_red"
+                                        icon="fa-shopping-cart"/>
+                            </div>
+
+                            <!-- —— AHORA: dividimos en dos columnas —— -->
+                            <div class="row mt16">
+                                <!-- Columna izquierda: TABLA de Pedidos -->
+                                <div class="col-6">
+                                    <t t-if="record.wooc_all_orders_json.raw_value">
+                                        <div class="o_kanban_section">
+                                            <strong>Pedidos sincronizados:</strong>
+                                            <table class="table table-sm table-hover mt8">
+                                                <thead>
+                                                    <tr>
+                                                        <th># Pedido</th>
+                                                        <th>Cliente</th>
+                                                        <th>Total</th>
+                                                        <th>Fecha</th>
+                                                        <th>Estado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Parseamos el JSON de pedidos -->
+                                                    <t t-set="orders" 
+                                                       t-value="JSON.parse(record.wooc_all_orders_json.raw_value || '[]')"/>
+                                                    <t t-foreach="orders" t-as="order">
+                                                        <tr>
+                                                            <td>
+                                                                <a t-attf-href="/web#id=#{order.id}&amp;model=sale.order&amp;view_type=form"
+                                                                   target="_blank">
+                                                                    <t t-esc="order.name"/>
+                                                                </a>
+                                                            </td>
+                                                            <td><t t-esc="order.customer"/></td>
+                                                            <td>€ <t t-esc="order.total"/></td>
+                                                            <td><t t-esc="order.date"/></td>
+                                                            <td>
+                                                                <span t-att-class="'badge ' + order.badge_class">
+                                                                    <t t-esc="order.status.charAt(0).toUpperCase() + order.status.slice(1)"/>
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </t>
+                                </div>
+
+                                <!-- Columna derecha: TABLA de Productos -->
+                                <div class="col-6">
+                                    <t t-if="record.wooc_all_products_json.raw_value">
+                                        <div class="o_kanban_section">
+                                            <strong>Productos sincronizados:</strong>
+                                            <table class="table table-sm table-hover mt8">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Producto</th>
+                                                        <th>Stock</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Parseamos el JSON de productos -->
+                                                    <t t-set="prods" 
+                                                       t-value="JSON.parse(record.wooc_all_products_json.raw_value || '[]')"/>
+                                                    <t t-foreach="prods" t-as="prod">
+                                                        <tr>
+                                                            <td>
+                                                                <a t-attf-href="/web#id=#{prod.id}&amp;model=product.product&amp;view_type=form"
+                                                                   target="_blank">
+                                                                    <t t-esc="prod.name"/>
+                                                                </a>
+                                                            </td>
+                                                            <td>
+                                                                <t t-esc="prod.qty_available"/> 
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                            <!-- FIN row -->
+
+                        </div>
+                    </t>
+                    <br/>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- BUSCADOR (“Search view”) de instancias (no cambia) -->
+    <record id="view_wooc_instance_search" model="ir.ui.view">
+        <field name="name">wooc.instance.search</field>
+        <field name="model">woocommerce.instance</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <filter string="Archivadas" name="inactive" domain="[('active','=',False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ACCIONES para abrir árbol/form/kanban (no cambian) -->
+    <record id="action_wooc_instance_list" model="ir.actions.act_window">
+        <field name="name">WooCommerce Instances</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">woocommerce.instance</field>
+        <field name="view_id" ref="view_wooc_instance_tree"/>
+        <field name="view_mode">tree,form</field>
+        <field name="target">current</field>
+    </record>
+
+    <record id="action_wooc_dashboard" model="ir.actions.act_window">
+        <field name="name">WooCommerce Dashboard</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">woocommerce.instance</field>
+        <field name="view_id" ref="view_wooc_instance_kanban"/>
+        <field name="view_mode">kanban</field>
+        <field name="target">current</field>
+    </record>
+</odoo>
